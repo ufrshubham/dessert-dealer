@@ -33,11 +33,11 @@ public class CatAI : MonoBehaviour
     [Header("Movement")]
     [SerializeField]
     [Tooltip("Speed at which the cat patrols between waypoints.")]
-    private float _patrolSpeed = 2.5f;
+    private float _patrolSpeed = 1.0f;
 
     [SerializeField]
     [Tooltip("Speed at which the cat chases the player.")]
-    private float _chaseSpeed = 6.0f;
+    private float _chaseSpeed = 4.0f;
 
     [SerializeField]
     [Tooltip("Acceleration of the cat when changing speed or direction.")]
@@ -83,6 +83,11 @@ public class CatAI : MonoBehaviour
     [Tooltip("Event triggered when the game is over.")]
     private UnityEvent _onGameOver;
 
+    [Header("Animation")]
+    [SerializeField]
+    [Tooltip("Animator on the Kitty child. If left empty it is auto-detected from children at Start.")]
+    private Animator _animator;
+
     /// <summary>
     /// Public read-only properties for the cat's vision parameters, 
     /// used by the FovVisualizer to draw the field of view cone in the editor.
@@ -109,6 +114,15 @@ public class CatAI : MonoBehaviour
     private float _investigateTimer;
     private bool _gameOver;
 
+    // Animator parameter hashes — cached to avoid per-frame string lookups
+    private int _animVert;
+    private int _animState;
+
+    // Smoothed animator values — interpolated at the same rate as CreatureMover (4.5f/s)
+    private const float k_AnimFlow = 4.5f;
+    private float _flowVert;
+    private float _flowState;
+
     // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
     private void Awake()
@@ -127,6 +141,14 @@ public class CatAI : MonoBehaviour
         {
             Debug.LogWarning("[CatAI] No GameObject tagged 'Player' found in scene.", this);
         }
+
+        if (_animator == null)
+        {
+            _animator = GetComponentInChildren<Animator>();
+        }
+
+        _animVert  = Animator.StringToHash("Vert");
+        _animState = Animator.StringToHash("State");
 
         TransitionTo(State.Patrol);
     }
@@ -150,6 +172,8 @@ public class CatAI : MonoBehaviour
                 UpdateChase();
                 break;
         }
+
+        DriveAnimator();
     }
 
     /// <summary>
@@ -329,6 +353,30 @@ public class CatAI : MonoBehaviour
     }
 
     /// <summary>
+    /// Drives the Kitty Animator each frame.
+    /// Vert=0 → idle, Vert=1+State=0 → walk, Vert=1+State=1 → run.
+    /// </summary>
+    private void DriveAnimator()
+    {
+        if (_animator == null)
+        {
+            return;
+        }
+
+        float targetVert  = _agent.velocity.magnitude > 0.1f ? 1f : 0f;
+        float targetState = _currentState == State.Chase      ? 1f : 0f;
+
+        // Smoothly interpolate toward target values — mirrors CreatureMover's k_InputFlow logic
+        float delta = k_AnimFlow * Time.deltaTime;
+        _flowVert  = Mathf.Clamp01(_flowVert  + delta * Mathf.Sign(targetVert  - _flowVert));
+        _flowState = Mathf.Clamp01(_flowState + delta * Mathf.Sign(targetState - _flowState));
+
+        // Update animator parameters with the smoothed values
+        _animator.SetFloat(_animVert,  _flowVert);
+        _animator.SetFloat(_animState, _flowState);
+    }
+
+    /// <summary>
     /// Handles collision with the player. If the cat collides with the player, it triggers the game over event and stops all movement.
     /// </summary>
     /// <param name="collision">The collision data associated with the collision event.</param>
@@ -348,6 +396,13 @@ public class CatAI : MonoBehaviour
 
         _gameOver = true;
         _agent.isStopped = true;
+
+        // Force idle pose immediately — Update won't run DriveAnimator again
+        if (_animator != null)
+        {
+            _animator.SetFloat(_animVert,  0f);
+            _animator.SetFloat(_animState, 0f);
+        }
 
         Debug.Log("GAME OVER");
         _onGameOver.Invoke();
