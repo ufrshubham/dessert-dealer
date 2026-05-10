@@ -66,8 +66,8 @@ public class CatAI : MonoBehaviour
 
     [Header("Patrol")]
     [SerializeField]
-    [Tooltip("Waypoints that the cat will patrol between in a loop.")]
-    private Transform[] _patrolWaypoints;
+    [Tooltip("Reference to the WaypointCollector that provides the patrol waypoints.")]
+    private WaypointCollector _waypointCollector;
 
     [SerializeField]
     [Tooltip("Distance within which the cat considers it has reached a waypoint.")]
@@ -293,19 +293,21 @@ public class CatAI : MonoBehaviour
     /// </summary>
     private void SetDestinationToWaypoint()
     {
+        var patrolWaypoints = _waypointCollector != null ? _waypointCollector.Waypoint : null;
+
         // If there are no waypoints assigned, we can't set a destination, so we simply return early.
-        if (_patrolWaypoints == null || _patrolWaypoints.Length == 0) 
+        if (patrolWaypoints == null || patrolWaypoints.Length == 0) 
         {
             return;
         }
 
         // If the current waypoint index is out of bounds (which shouldn't happen due to the way we advance waypoints), we also return early.
-        if (_patrolWaypoints[_waypointIndex] == null)
+        if (patrolWaypoints[_waypointIndex] == null)
         {
             return;
         }
 
-        _agent.SetDestination(_patrolWaypoints[_waypointIndex].position);
+        _agent.SetDestination(patrolWaypoints[_waypointIndex].position);
     }
 
     /// <summary>
@@ -315,12 +317,14 @@ public class CatAI : MonoBehaviour
     /// </summary>
     private void AdvanceWaypoint()
     {
-        if (_patrolWaypoints == null || _patrolWaypoints.Length == 0) 
+        var patrolWaypoints = _waypointCollector != null ? _waypointCollector.Waypoint : null;
+
+        if (patrolWaypoints == null || patrolWaypoints.Length == 0) 
         {
             return;
         }
 
-        _waypointIndex = (_waypointIndex + 1) % _patrolWaypoints.Length;
+        _waypointIndex = (_waypointIndex + 1) % patrolWaypoints.Length;
         SetDestinationToWaypoint();
     }
 
