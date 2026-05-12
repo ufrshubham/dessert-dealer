@@ -102,7 +102,7 @@ MonoBehaviour:
   _acceleration: 12
   _viewRadius: 12
   _viewAngle: 90
-  _eyeHeight: 0.5
+  _eyeHeight: 0.2
   _targetMask:
     serializedVersion: 2
     m_Bits: 64
