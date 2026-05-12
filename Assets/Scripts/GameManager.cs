@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -11,16 +10,13 @@ public class GameManager : MonoBehaviour
     public bool isGameOver = false;
     public int score = 0;
 
-    [Header("Collectible Settings")]
-    [SerializeField] private string collectibleTag = "Collectible";
-
-    [Header("Delivery Zone Settings")]
-    [SerializeField] private string deliveryZoneTag = "DeliveryZone";
-
     [Header("Events")]
     public UnityEvent onItemCollected;
     public UnityEvent onItemDelivered;
     public UnityEvent onGameOver;
+
+    public Action OnMouseTrapTriggered;
+    public Action OnCaughtByCat;
 
     // Tracks how many items the player is currently carrying
     private int itemsCarried = 0;
