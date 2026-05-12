@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     [Header("Game State")]
     public bool isGameOver = false;
     public int score = 0;
+    public int Days = 0;
 
     [Header("Collectible Settings")]
     [SerializeField] private string collectibleTag = "Collectible";
