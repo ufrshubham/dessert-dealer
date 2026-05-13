@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Collectible
   - DeliveryZone
+  - Hand
   layers:
   - Default
   - TransparentFX
