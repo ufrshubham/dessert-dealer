@@ -30,18 +30,61 @@ public class RatController : MonoBehaviour
 
         // getting movement parameter hash
         movementId = Animator.StringToHash("movement");
+        
+        // initialize yaw
+        yaw = transform.eulerAngles.y;
     }
 
     void FixedUpdate()
     {
         moveInput = inputActions.Player.Move.ReadValue<Vector2>();
 
-        // rotate rat around Y axis using x movement input
-        yaw = moveInput.x * rotationSpeed * Time.fixedDeltaTime;
-        rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, yaw, 0f));
+        // update yaw
+        yaw += moveInput.x * rotationSpeed * Time.fixedDeltaTime;
+        yaw %= 360f;
+        Quaternion flatYawRotation = Quaternion.Euler(0f, yaw, 0f);
 
-        // move rat forward/backward using y movement input
-        movement = transform.forward * moveInput.y * moveSpeed * Time.fixedDeltaTime;
+        Vector3 targetUp = Vector3.up;
+        bool foundHit = false;
+        float closestDistance = float.MaxValue;
+        RaycastHit slopeHit = new RaycastHit();
+        
+        // cast a ray down to find the slope normal, ignoring the rat itself
+        RaycastHit[] hits = Physics.RaycastAll(transform.position + Vector3.up * 0.1f, Vector3.down, 0.5f);
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.root != transform && !hit.collider.isTrigger && hit.distance < closestDistance)
+            {
+                slopeHit = hit;
+                closestDistance = hit.distance;
+                foundHit = true;
+            }
+        }
+
+        if (foundHit)
+        {
+            // to only apply pitch (X-axis rotation) and ignore roll (Z-axis rotation),
+            // we project the slope normal onto the plane defined by our right vector.
+            Vector3 flatRight = flatYawRotation * Vector3.right;
+            targetUp = Vector3.ProjectOnPlane(slopeHit.normal, flatRight).normalized;
+        }
+
+        // smoothly interpolate the Up vector
+        Vector3 currentUp = rb.rotation * Vector3.up;
+        Vector3 smoothedUp = Vector3.Slerp(currentUp, targetUp, Time.fixedDeltaTime * 10f);
+
+        // calculate final rotation
+        Vector3 flatForward = flatYawRotation * Vector3.forward;
+        Vector3 projectedForward = Vector3.ProjectOnPlane(flatForward, smoothedUp).normalized;
+
+        if (projectedForward == Vector3.zero) 
+            projectedForward = flatForward;
+
+        Quaternion finalRotation = Quaternion.LookRotation(projectedForward, smoothedUp);
+        rb.MoveRotation(finalRotation);
+
+        // move rat forward/backward using y movement input along the slope
+        movement = finalRotation * Vector3.forward * moveInput.y * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + movement);
 
         // smooth movement for animation

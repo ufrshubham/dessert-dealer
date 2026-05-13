@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Events;
 
 /// <summary>
 /// Simple AI for a patrolling cat that can detect and chase the player.
@@ -77,11 +76,6 @@ public class CatAI : MonoBehaviour
     [SerializeField]
     [Tooltip("Time the cat will spend investigating the player's last known position before giving up and returning to patrol.")]
     private float _investigateTime = 4.0f;
-
-    [Header("Events")]
-    [SerializeField]
-    [Tooltip("Event triggered when the game is over.")]
-    private UnityEvent _onGameOver;
 
     [Header("Animation")]
     [SerializeField]
@@ -405,6 +399,6 @@ public class CatAI : MonoBehaviour
         }
 
         Debug.Log("GAME OVER");
-        _onGameOver.Invoke();
+        GameManager.Instance.OnCaughtByCat?.Invoke();
     }
 }

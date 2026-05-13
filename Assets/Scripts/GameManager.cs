@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -35,6 +34,8 @@ public class GameManager : MonoBehaviour
     public UnityEvent onGameWon;
     public UnityEvent onGameOver;
 
+    public Action OnMouseTrapTriggered;
+    public Action OnCaughtByCat;
 
     // ─── Singleton Setup ────────────────────────────────────────────────────────
 
