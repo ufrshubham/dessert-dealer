@@ -7,6 +7,7 @@ TagManager:
   - Collectible
   - DeliveryZone
   - Hand
+  - Pickup
   layers:
   - Default
   - TransparentFX
