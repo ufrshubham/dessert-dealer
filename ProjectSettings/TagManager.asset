@@ -8,6 +8,7 @@ TagManager:
   - DeliveryZone
   - Hand
   - Pickup
+  - Ground
   layers:
   - Default
   - TransparentFX

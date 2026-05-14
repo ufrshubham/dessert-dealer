@@ -20,6 +20,7 @@ public class RatController : MonoBehaviour
     int movementId;
     DessertCollector dessertCollector;
     float currentMoveSpeed;
+    bool isGrounded;
 
     void Start()
     {
@@ -111,8 +112,29 @@ public class RatController : MonoBehaviour
 
     void Jump()
     {
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        if (isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isGrounded = false;
+        }
     }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") && !isGrounded)
+        {
+            isGrounded = true;
+        }
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") && isGrounded)
+        {
+            isGrounded = false;
+        }
+    }
+
     void OnDisable()
     {
         inputActions.Player.Jump.performed -= ctx => Jump();
