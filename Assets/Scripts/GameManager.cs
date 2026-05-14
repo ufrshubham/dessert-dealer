@@ -119,7 +119,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void DeliverItems()
     {
-        if (isGameOver || !deliveryReady) return;
+        // if (isGameOver || !deliveryReady) return;
 
         totalScore += targetForToday * 50;         // delivery bonus
         Debug.Log($"[GameManager] Day {currentDay} complete! Score: {totalScore}");
@@ -136,7 +136,7 @@ public class GameManager : MonoBehaviour
     {
         AdvanceDay();
 
-        if (!isGameWon)
+        if (isGameWon)
         {
             SceneManager.LoadScene(gameplaySceneName);
         }

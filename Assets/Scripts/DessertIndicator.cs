@@ -12,7 +12,6 @@ public class DessertIndicator : MonoBehaviour
     [SerializeField] private float spriteRotationOffset = 90f;
 
     public Transform dessertToLocate;
-    public List<Transform> desserts = new();
 
     private void Start()
     {

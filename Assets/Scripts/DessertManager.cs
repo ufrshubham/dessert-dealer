@@ -39,5 +39,8 @@ public class DessertManager : MonoBehaviour
         desserts[0].SetActive(false);
         desserts.RemoveAt(0);
         EnableDessert();
+
+        GameManager.Instance.CompleteDay();
+        GameManager.Instance.DeliverItems();
     }
 }
