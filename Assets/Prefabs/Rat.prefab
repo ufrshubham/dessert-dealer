@@ -161,7 +161,7 @@ MonoBehaviour:
   regularMoveSpeed: 5
   heavyMoveSpeed: 1
   jumpForce: 5
-  rotationSpeed: 120
+  rotationSpeed: 5
   animationSmoothTime: 0.1
   jumpableLayer: 7
 --- !u!114 &8918023795699988232

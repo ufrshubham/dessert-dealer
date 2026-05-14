@@ -6,7 +6,7 @@ public class RatController : MonoBehaviour
     public float regularMoveSpeed = 5f;
     public float heavyMoveSpeed = 2f;
     public float jumpForce = 5f;
-    public float rotationSpeed = 120f;
+    public float rotationSpeed = 5f;
     public float animationSmoothTime = 0.1f;
 
     public int jumpableLayer = 7;
@@ -23,6 +23,7 @@ public class RatController : MonoBehaviour
     float currentMoveSpeed;
     int groundContactCount = 0;
     Transform cameraTransform;
+    Quaternion smoothedYaw;
 
     void Start()
     {
@@ -48,6 +49,9 @@ public class RatController : MonoBehaviour
         // cache camera transform
         cameraTransform = Camera.main.transform;
 
+        // initialize smoothed yaw to current facing direction
+        smoothedYaw = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+
         currentMoveSpeed = regularMoveSpeed;
 
         Cursor.lockState = CursorLockMode.Locked;
@@ -65,16 +69,13 @@ public class RatController : MonoBehaviour
         Vector3 moveDirection = camForward * moveInput.y + camRight * moveInput.x;
         bool isMoving = moveDirection.sqrMagnitude > 0.01f;
 
-        // only rotate the rat to face camera direction when moving
-        Quaternion flatYawRotation;
+        // only update target yaw when moving, otherwise hold current orientation
         if (isMoving)
         {
-            flatYawRotation = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+            Quaternion targetYaw = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+            smoothedYaw = Quaternion.Slerp(smoothedYaw, targetYaw, Time.fixedDeltaTime * rotationSpeed);
         }
-        else
-        {
-            flatYawRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-        }
+        Quaternion flatYawRotation = smoothedYaw;
 
         Vector3 targetUp = Vector3.up;
         bool foundHit = false;
