@@ -9,6 +9,8 @@ public class RatController : MonoBehaviour
     public float rotationSpeed = 120f;
     public float animationSmoothTime = 0.1f;
 
+    public int jumpableLayer = 7;
+
     Rigidbody rb;
     Animator animator;
     InputActions inputActions;
@@ -20,7 +22,7 @@ public class RatController : MonoBehaviour
     int movementId;
     DessertCollector dessertCollector;
     float currentMoveSpeed;
-    bool isGrounded;
+    int groundContactCount = 0;
 
     void Start()
     {
@@ -112,26 +114,25 @@ public class RatController : MonoBehaviour
 
     void Jump()
     {
-        if (isGrounded)
+        if (groundContactCount > 0)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isGrounded = false;
         }
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Ground") && !isGrounded)
+        if (collision.gameObject.layer == jumpableLayer)
         {
-            isGrounded = true;
+            groundContactCount++;
         }
     }
 
     void OnCollisionExit(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Ground") && isGrounded)
+        if (collision.gameObject.layer == jumpableLayer)
         {
-            isGrounded = false;
+            groundContactCount--;
         }
     }
 
