@@ -3,7 +3,8 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class RatController : MonoBehaviour
 {
-    public float moveSpeed = 5f;
+    public float regularMoveSpeed = 5f;
+    public float heavyMoveSpeed = 2f;
     public float jumpForce = 5f;
     public float rotationSpeed = 120f;
     public float animationSmoothTime = 0.1f;
@@ -17,22 +18,37 @@ public class RatController : MonoBehaviour
     float currentMovement;
     float smoothedMovement;
     int movementId;
+    DessertCollector dessertCollector;
+    float currentMoveSpeed;
+    bool isGrounded;
 
     void Start()
     {
         // getting references
         rb = (Rigidbody)GetComponent("Rigidbody");
         animator = (Animator)GetComponent("Animator");
+        dessertCollector = (DessertCollector)GetComponent("DessertCollector");
         inputActions = InputManager.Instance.inputActions;
 
         // subscribing to jump action
         inputActions.Player.Jump.performed += ctx => Jump();
 
+        // subscribing to dessert picked up action
+        dessertCollector.OnDessertPickedUp += OnDessertPickedUp;
+
+        // subscribing to dessert dropped action
+        dessertCollector.OnDessertDropped += OnDessertDropped;
+
+
         // getting movement parameter hash
         movementId = Animator.StringToHash("movement");
-        
+
         // initialize yaw
         yaw = transform.eulerAngles.y;
+
+        currentMoveSpeed = regularMoveSpeed;
+
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void FixedUpdate()
@@ -48,7 +64,7 @@ public class RatController : MonoBehaviour
         bool foundHit = false;
         float closestDistance = float.MaxValue;
         RaycastHit slopeHit = new RaycastHit();
-        
+
         // cast a ray down to find the slope normal, ignoring the rat itself
         RaycastHit[] hits = Physics.RaycastAll(transform.position + Vector3.up * 0.1f, Vector3.down, 0.5f);
         foreach (RaycastHit hit in hits)
@@ -77,14 +93,14 @@ public class RatController : MonoBehaviour
         Vector3 flatForward = flatYawRotation * Vector3.forward;
         Vector3 projectedForward = Vector3.ProjectOnPlane(flatForward, smoothedUp).normalized;
 
-        if (projectedForward == Vector3.zero) 
+        if (projectedForward == Vector3.zero)
             projectedForward = flatForward;
 
         Quaternion finalRotation = Quaternion.LookRotation(projectedForward, smoothedUp);
         rb.MoveRotation(finalRotation);
 
         // move rat forward/backward using y movement input along the slope
-        movement = finalRotation * Vector3.forward * moveInput.y * moveSpeed * Time.fixedDeltaTime;
+        movement = finalRotation * Vector3.forward * moveInput.y * currentMoveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + movement);
 
         // smooth movement for animation
@@ -96,11 +112,43 @@ public class RatController : MonoBehaviour
 
     void Jump()
     {
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        if (isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isGrounded = false;
+        }
     }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") && !isGrounded)
+        {
+            isGrounded = true;
+        }
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") && isGrounded)
+        {
+            isGrounded = false;
+        }
+    }
+
     void OnDisable()
     {
         inputActions.Player.Jump.performed -= ctx => Jump();
+        dessertCollector.OnDessertPickedUp -= OnDessertPickedUp;
+        dessertCollector.OnDessertDropped -= OnDessertDropped;
     }
+    void OnDessertPickedUp()
+    {
+        currentMoveSpeed = heavyMoveSpeed;
+    }
+    void OnDessertDropped()
+    {
+        currentMoveSpeed = regularMoveSpeed;
+    }
+
 
 }

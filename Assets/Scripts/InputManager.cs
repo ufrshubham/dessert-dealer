@@ -18,12 +18,12 @@ public class InputManager : MonoBehaviour
 
     void OnEnable()
     {
-        inputActions.Enable();
+        inputActions?.Enable();
     }
 
     void OnDisable()
     {
-        inputActions.Disable();
+        inputActions?.Disable();
     }
 
 
