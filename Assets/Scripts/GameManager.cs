@@ -1,10 +1,30 @@
 using System;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+
+    [Header("Scene Names")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset gameplaySceneAsset;
+    [SerializeField] private SceneAsset dealSceneAsset;
+#endif
+    [HideInInspector] [SerializeField] private string gameplaySceneName = "SampleScene";
+    [HideInInspector] [SerializeField] private string dealSceneName     = "DealScene";
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (gameplaySceneAsset != null) gameplaySceneName = gameplaySceneAsset.name;
+        if (dealSceneAsset     != null) dealSceneName     = dealSceneAsset.name;
+    }
+#endif
 
     [Header("Day Progression")]
     [SerializeField] private int currentDay = 1;
@@ -105,13 +125,34 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[GameManager] Day {currentDay} complete! Score: {totalScore}");
         onDayComplete?.Invoke();
 
-        AdvanceDay();
+        SceneManager.LoadScene(dealSceneName);
     }
+
+    /// <summary>
+    /// Called by DealCutsceneController after the cutscene finishes.
+    /// Advances the day and returns to the gameplay scene.
+    /// </summary>
+    public void CompleteDay()
+    {
+        AdvanceDay();
+
+        if (!isGameWon)
+        {
+            SceneManager.LoadScene(gameplaySceneName);
+        }
+    }
+
+    /// <summary>
+    /// Returns the money the player earned this delivery (used by the cutscene UI).
+    /// Safe to call before AdvanceDay resets the counter.
+    /// </summary>
+    public int GetDealMoneyEarned() => targetForToday * 50;
 
     // ─── Day Advance / Win ────────────────────────────────────────────────────────
 
     private void AdvanceDay()
     {
+        deliveryReady = false;
         if (currentDay >= maxDays)
         {
             TriggerWin();
