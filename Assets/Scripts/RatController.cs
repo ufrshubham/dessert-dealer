@@ -46,6 +46,8 @@ public class RatController : MonoBehaviour
         yaw = transform.eulerAngles.y;
 
         currentMoveSpeed = regularMoveSpeed;
+
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void FixedUpdate()
