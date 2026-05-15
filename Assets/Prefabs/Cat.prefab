@@ -100,9 +100,10 @@ MonoBehaviour:
   _patrolSpeed: 1
   _chaseSpeed: 4
   _acceleration: 12
-  _viewRadius: 12
-  _viewAngle: 90
-  _eyeHeight: 0.5
+  _viewRadius: 8
+  _viewAngle: 120
+  _eyeHeight: 0.25
+  _visionAlertTime: 0.6
   _targetMask:
     serializedVersion: 2
     m_Bits: 64
@@ -112,9 +113,8 @@ MonoBehaviour:
   _waypointCollector: {fileID: 0}
   _waypointTolerance: 0.5
   _investigateTime: 4
-  _onGameOver:
-    m_PersistentCalls:
-      m_Calls: []
+  _proximityRadius: 2
+  _proximityAlertTime: 2
   _animator: {fileID: 6197700514221019104}
 --- !u!114 &4794837773602519553
 MonoBehaviour:
@@ -130,6 +130,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FovVisualizer
   _fillColor: {r: 1, g: 1, b: 0, a: 0.15}
   _outlineColor: {r: 1, g: 0.85, b: 0, a: 1}
+  _proximityIdleColor: {r: 0.4, g: 0.8, b: 1, a: 0.5}
+  _proximityAlertColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  _visionIdleColor: {r: 1, g: 1, b: 0, a: 0.3}
+  _visionAlertColor: {r: 1, g: 0.5, b: 0, a: 1}
 --- !u!1001 &1064285124278277338
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -56,6 +56,10 @@ public class CatAI : MonoBehaviour
     private float _eyeHeight = 0.5f;
 
     [SerializeField]
+    [Tooltip("How long (seconds) the cat must hold the rat in its FOV before triggering Chase. Set to 0 for instant reaction.")]
+    private float _visionAlertTime = 0.6f;
+
+    [SerializeField]
     [Tooltip("Layer mask for detecting the player.")]
     private LayerMask _targetMask;
 
@@ -76,6 +80,15 @@ public class CatAI : MonoBehaviour
     [SerializeField]
     [Tooltip("Time the cat will spend investigating the player's last known position before giving up and returning to patrol.")]
     private float _investigateTime = 4.0f;
+
+    [Header("Proximity Sense")]
+    [SerializeField]
+    [Tooltip("Radius of the inner proximity zone. If the rat lingers here long enough the cat will detect it regardless of FOV.")]
+    private float _proximityRadius = 3.0f;
+
+    [SerializeField]
+    [Tooltip("How long (seconds) the rat must remain inside the proximity zone before the cat reacts.")]
+    private float _proximityAlertTime = 1.5f;
 
     [Header("Animation")]
     [SerializeField]
@@ -100,6 +113,13 @@ public class CatAI : MonoBehaviour
     /// </summary>
     public float ViewHeight => _eyeHeight;
 
+    /// <summary>
+    /// How full the proximity alert meter is (0–1). Exposed so FovVisualizer can tint the proximity ring.
+    /// </summary>
+    public float ProximityAlertRadius => _proximityRadius;
+    public float ProximityAlertFill   => _proximityAlertTime > 0f ? _proximityTimer / _proximityAlertTime : 0f;
+    public float VisionAlertFill      => _visionAlertTime    > 0f ? _visionTimer    / _visionAlertTime    : 0f;
+
     private NavMeshAgent _agent;
     private Transform _playerTransform;
     private State _currentState;
@@ -107,6 +127,12 @@ public class CatAI : MonoBehaviour
     private Vector3 _lastKnownPosition;
     private float _investigateTimer;
     private bool _gameOver;
+
+    // Proximity sense — tracks how long the rat has been inside the inner zone
+    private float _proximityTimer;
+
+    // Vision sense — tracks how long the rat has been held in the FOV cone
+    private float _visionTimer;
 
     // Animator parameter hashes — cached to avoid per-frame string lookups
     private int _animVert;
@@ -167,6 +193,8 @@ public class CatAI : MonoBehaviour
                 break;
         }
 
+        UpdateProximitySense();
+        UpdateVisionSense();
         DriveAnimator();
     }
 
@@ -195,39 +223,96 @@ public class CatAI : MonoBehaviour
 
             case State.Chase:
                 _agent.speed = _chaseSpeed;
+                // Set destination immediately so the agent starts moving this frame
+                // and DriveAnimator sees velocity > 0 on the same tick.
+                if (_playerTransform != null)
+                    _agent.SetDestination(_playerTransform.position);
                 break;
         }
     }
 
     /// <summary>
-    /// In Patrol state, the cat moves between waypoints. If it sees the player, it transitions to Chase state.
+    /// Accumulates the proximity timer while the rat lingers in the inner zone.
+    /// Bypasses FOV entirely — triggers Chase once the timer fills.
+    /// Resets immediately when the rat leaves the zone or Chase is already active.
     /// </summary>
-    private void UpdatePatrol()
+    private void UpdateProximitySense()
     {
-        // Check if we've reached the current waypoint and need to advance to the next one
-        if (!_agent.pathPending && _agent.remainingDistance < _waypointTolerance)
+        // Already chasing — no need to run proximity sense
+        if (_currentState == State.Chase || _playerTransform == null)
         {
-            AdvanceWaypoint();
+            _proximityTimer = 0f;
+            return;
         }
 
-        if (CanSeePlayer())
+        float distToPlayer = Vector3.Distance(transform.position, _playerTransform.position);
+
+        if (distToPlayer <= _proximityRadius)
         {
-            TransitionTo(State.Chase);
+            _proximityTimer += Time.deltaTime;
+
+            if (_proximityTimer >= _proximityAlertTime)
+            {
+                _proximityTimer = 0f;
+                _lastKnownPosition = _playerTransform.position;
+                TransitionTo(State.Chase);
+            }
+        }
+        else
+        {
+            // Rat left the zone — decay the timer back to zero
+            _proximityTimer = Mathf.Max(0f, _proximityTimer - Time.deltaTime);
         }
     }
 
     /// <summary>
-    /// In Investigate state, the cat moves to the player's last known position and waits. If it sees the player again, 
-    /// it transitions back to Chase. If the timer runs out without seeing the player, it returns to Patrol.
+    /// Accumulates the vision timer while the rat is held inside the FOV cone.
+    /// Decays when the rat leaves the cone. Triggers Chase when the timer fills.
+    /// Skipped entirely while already chasing.
     /// </summary>
-    private void UpdateInvestigate()
+    private void UpdateVisionSense()
     {
-        if (CanSeePlayer())
+        if (_currentState == State.Chase || _playerTransform == null)
         {
-            TransitionTo(State.Chase);
+            _visionTimer = 0f;
             return;
         }
 
+        if (CanSeePlayer())
+        {
+            _visionTimer += Time.deltaTime;
+
+            if (_visionTimer >= _visionAlertTime)
+            {
+                _visionTimer = 0f;
+                _lastKnownPosition = _playerTransform.position;
+                TransitionTo(State.Chase);
+            }
+        }
+        else
+        {
+            // Rat left the cone — decay the timer back to zero
+            _visionTimer = Mathf.Max(0f, _visionTimer - Time.deltaTime);
+        }
+    }
+
+    /// <summary>
+    /// In Patrol state, the cat moves between waypoints.
+    /// </summary>
+    private void UpdatePatrol()
+    {
+        if (!_agent.pathPending && _agent.remainingDistance < _waypointTolerance)
+        {
+            AdvanceWaypoint();
+        }
+    }
+
+    /// <summary>
+    /// In Investigate state, the cat moves to the player's last known position and waits.
+    /// If the timer runs out without spotting the player again, it returns to Patrol.
+    /// </summary>
+    private void UpdateInvestigate()
+    {
         // Count down the investigation timer only after arriving at last known pos
         if (!_agent.pathPending && _agent.remainingDistance < _waypointTolerance)
         {
@@ -240,17 +325,19 @@ public class CatAI : MonoBehaviour
     }
 
     /// <summary>
-    /// In Chase state, the cat continuously updates its destination to the player's current position as long as it can see the player. 
-    /// If it loses sight of the player, it transitions to Investigate state to search the last known location.
+    /// In Chase state, the cat continuously updates its destination to the player's current position.
+    /// The cat considers the player detected if it can see them OR they are still within proximity range.
+    /// This prevents proximity-triggered chases from immediately reverting to Investigate
+    /// because the rat was behind the cat and outside the FOV cone.
     /// </summary>
     private void UpdateChase()
     {
-        if (_playerTransform == null)
-        {
-            return;
-        }
+        if (_playerTransform == null) return;
 
-        if (CanSeePlayer())
+        float dist = Vector3.Distance(transform.position, _playerTransform.position);
+        bool canDetect = CanSeePlayer() || dist <= _proximityRadius;
+
+        if (canDetect)
         {
             _agent.SetDestination(_playerTransform.position);
         }
