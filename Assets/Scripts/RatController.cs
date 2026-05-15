@@ -6,21 +6,24 @@ public class RatController : MonoBehaviour
     public float regularMoveSpeed = 5f;
     public float heavyMoveSpeed = 2f;
     public float jumpForce = 5f;
-    public float rotationSpeed = 120f;
+    public float rotationSpeed = 5f;
     public float animationSmoothTime = 0.1f;
+
+    public int jumpableLayer = 7;
 
     Rigidbody rb;
     Animator animator;
     InputActions inputActions;
     Vector2 moveInput;
-    float yaw;
     Vector3 movement;
     float currentMovement;
     float smoothedMovement;
     int movementId;
     DessertCollector dessertCollector;
     float currentMoveSpeed;
-    bool isGrounded;
+    int groundContactCount = 0;
+    Transform cameraTransform;
+    Quaternion smoothedYaw;
 
     void Start()
     {
@@ -43,8 +46,11 @@ public class RatController : MonoBehaviour
         // getting movement parameter hash
         movementId = Animator.StringToHash("movement");
 
-        // initialize yaw
-        yaw = transform.eulerAngles.y;
+        // cache camera transform
+        cameraTransform = Camera.main.transform;
+
+        // initialize smoothed yaw to current facing direction
+        smoothedYaw = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
 
         currentMoveSpeed = regularMoveSpeed;
 
@@ -55,10 +61,21 @@ public class RatController : MonoBehaviour
     {
         moveInput = inputActions.Player.Move.ReadValue<Vector2>();
 
-        // update yaw
-        yaw += moveInput.x * rotationSpeed * Time.fixedDeltaTime;
-        yaw %= 360f;
-        Quaternion flatYawRotation = Quaternion.Euler(0f, yaw, 0f);
+        // get camera's forward and right directions projected onto the ground plane
+        Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
+        Vector3 camRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
+
+        // calculate movement direction relative to camera
+        Vector3 moveDirection = camForward * moveInput.y + camRight * moveInput.x;
+        bool isMoving = moveDirection.sqrMagnitude > 0.01f;
+
+        // only update target yaw when moving, otherwise hold current orientation
+        if (isMoving)
+        {
+            Quaternion targetYaw = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+            smoothedYaw = Quaternion.Slerp(smoothedYaw, targetYaw, Time.fixedDeltaTime * rotationSpeed);
+        }
+        Quaternion flatYawRotation = smoothedYaw;
 
         Vector3 targetUp = Vector3.up;
         bool foundHit = false;
@@ -99,39 +116,39 @@ public class RatController : MonoBehaviour
         Quaternion finalRotation = Quaternion.LookRotation(projectedForward, smoothedUp);
         rb.MoveRotation(finalRotation);
 
-        // move rat forward/backward using y movement input along the slope
-        movement = finalRotation * Vector3.forward * moveInput.y * currentMoveSpeed * Time.fixedDeltaTime;
+        // move rat in the camera-relative direction along the slope
+        float inputMagnitude = Mathf.Clamp01(moveDirection.magnitude);
+        movement = finalRotation * Vector3.forward * inputMagnitude * currentMoveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + movement);
 
         // smooth movement for animation
         currentMovement = animator.GetFloat(movementId);
-        smoothedMovement = Mathf.Lerp(currentMovement, moveInput.y, Time.fixedDeltaTime / animationSmoothTime);
+        smoothedMovement = Mathf.Lerp(currentMovement, inputMagnitude, Time.fixedDeltaTime / animationSmoothTime);
         animator.SetFloat(movementId, smoothedMovement);
 
     }
 
     void Jump()
     {
-        if (isGrounded)
+        if (groundContactCount > 0)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isGrounded = false;
         }
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Ground") && !isGrounded)
+        if (collision.gameObject.layer == jumpableLayer)
         {
-            isGrounded = true;
+            groundContactCount++;
         }
     }
 
     void OnCollisionExit(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Ground") && isGrounded)
+        if (collision.gameObject.layer == jumpableLayer)
         {
-            isGrounded = false;
+            groundContactCount--;
         }
     }
 
