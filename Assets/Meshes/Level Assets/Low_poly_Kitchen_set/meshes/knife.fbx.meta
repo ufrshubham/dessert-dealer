@@ -1,7 +1,14 @@
 fileFormatVersion: 2
 guid: 41a61a44d9f3c8841b164d5e69d8f88e
+AssetOrigin:
+  serializedVersion: 1
+  productId: 303227
+  packageName: Low Poly Kitchen Set
+  packageVersion: 1.0
+  assetPath: Assets/Low_poly_Kitchen_set/meshes/knife.fbx
+  uploadId: 710774
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects: {}
   materials:
@@ -16,8 +23,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -48,7 +53,7 @@ ModelImporter:
     nodeNameCollisionStrategy: 1
     fileIdsGeneration: 2
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
     keepQuads: 0
     weldVertices: 1
@@ -58,6 +63,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -107,10 +115,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 303227
-  packageName: Low Poly Kitchen Set
-  packageVersion: 1.0
-  assetPath: Assets/Low_poly_Kitchen_set/meshes/knife.fbx
-  uploadId: 710774
