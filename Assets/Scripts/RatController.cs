@@ -39,6 +39,9 @@ public class RatController : MonoBehaviour
         // subscribing to dessert dropped action
         dessertCollector.OnDessertDropped += OnDessertDropped;
 
+        // subscribing to dessert delivered action
+        dessertCollector.OnDessertDelivered += OnDessertDelivered;
+
 
         // getting movement parameter hash
         movementId = Animator.StringToHash("movement");
@@ -48,7 +51,7 @@ public class RatController : MonoBehaviour
 
         currentMoveSpeed = regularMoveSpeed;
 
-        Cursor.lockState = CursorLockMode.Locked;
+        // Cursor.lockState = CursorLockMode.Locked;
     }
 
     void FixedUpdate()
@@ -146,6 +149,11 @@ public class RatController : MonoBehaviour
         currentMoveSpeed = heavyMoveSpeed;
     }
     void OnDessertDropped()
+    {
+        currentMoveSpeed = regularMoveSpeed;
+    }
+
+    void OnDessertDelivered()
     {
         currentMoveSpeed = regularMoveSpeed;
     }

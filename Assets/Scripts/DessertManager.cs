@@ -4,11 +4,14 @@ using UnityEngine;
 
 public class DessertManager : MonoBehaviour
 {
+    public static DessertManager Instance { get; private set; }
     public List<GameObject> desserts = new();
     public DessertIndicator dessertIndicator;
     public DessertCollector dessertCollector;
     void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
         dessertCollector.OnDessertPickedUp += OnDessertPickedUp;
         dessertCollector.OnDessertDropped += OnDessertDropped;
         // disable all desserts

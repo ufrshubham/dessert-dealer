@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class CollectibleSpawner : MonoBehaviour
 {
-    [Header("Collectible Prefab")]
-    [SerializeField] private GameObject collectiblePrefab;
 
     [Header("Spawn Points")]
     [Tooltip("Assign empty GameObjects as spawn positions. Leave empty to use children of this object.")]
@@ -14,10 +12,10 @@ public class CollectibleSpawner : MonoBehaviour
     [Tooltip("If true, picks random spawn points each day. If false, uses all points.")]
     [SerializeField] private bool randomizeSpawnPoints = true;
     [Tooltip("Only used if randomizeSpawnPoints is true — must be <= spawnPoints count")]
-    [SerializeField] private bool preventDuplicateSpots = true;
+    [SerializeField] private bool randomizeDesserts    = true;
 
     // Pool of spawned collectibles, cleared and refilled each day
-    private List<GameObject> activeCollectibles = new List<GameObject>();
+    private List<GameObject> allInstances = new List<GameObject>();
 
     private void Start()
     {
@@ -33,92 +31,123 @@ public class CollectibleSpawner : MonoBehaviour
         GameManager.Instance.onDayChanged.AddListener(OnDayChanged);
 
         // Spawn for day 1 on start
-        SpawnForDay(GameManager.Instance.GetTargetForToday());
+        PrewarmInstances();
+
+        ActivateForDay(GameManager.Instance.GetTargetForToday());
     }
 
     // ── Day change listener ──────────────────────────────────────────────────
 
+    private void OnDestroy()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.onDayChanged.RemoveListener(OnDayChanged);
+    }
+
     private void OnDayChanged(int newDay)
     {
-        ClearCollectibles();
-        SpawnForDay(GameManager.Instance.GetTargetForToday());
+        DisableAll();
+        ActivateForDay(GameManager.Instance.GetTargetForToday());
+    }
+
+    private void PrewarmInstances()
+    {
+        List<GameObject> desserts = DessertManager.Instance.desserts;
+
+        if (desserts == null || desserts.Count == 0)
+        {
+            Debug.LogError("[CollectibleSpawner] DessertManager.desserts is empty!");
+            return;
+        }
+
+        // Spawn enough instances to cover the largest possible day target
+        int maxNeeded = Mathf.Min(spawnPoints.Length, desserts.Count * 3); // generous pool
+
+        for (int i = 0; i < maxNeeded; i++)
+        {
+            GameObject prefab = desserts[i % desserts.Count];
+            GameObject obj    = Instantiate(prefab);
+            obj.SetActive(false);   // start inactive
+            allInstances.Add(obj);
+        }
+
+        Debug.Log($"[CollectibleSpawner] Pre-warmed {allInstances.Count} instances.");
     }
 
     // ── Core spawn logic ─────────────────────────────────────────────────────
 
-    private void SpawnForDay(int count)
-    {
-        if (collectiblePrefab == null)
-        {
-            Debug.LogError("[CollectibleSpawner] No collectible prefab assigned!");
-            return;
-        }
+    // ── Activate N instances at chosen spawn points ───────────────────────────
 
+    private void ActivateForDay(int count)
+    {
         if (spawnPoints.Length == 0)
         {
-            Debug.LogError("[CollectibleSpawner] No spawn points found!");
+            Debug.LogError("[CollectibleSpawner] No spawn points!");
             return;
         }
 
-        // Clamp count to available spawn points
-        int spawnCount = Mathf.Min(count, spawnPoints.Length);
+        int spawnCount         = Mathf.Min(count, spawnPoints.Length, allInstances.Count);
+        List<Transform> points = PickSpawnPoints(spawnCount);
 
-        List<Transform> chosenPoints = PickSpawnPoints(spawnCount);
-
-        foreach (Transform point in chosenPoints)
+        for (int i = 0; i < spawnCount; i++)
         {
-            GameObject obj = Instantiate(collectiblePrefab, point.position, point.rotation);
+            GameObject obj = allInstances[i];
+            obj.transform.position = points[i].position;
+            obj.transform.rotation = points[i].rotation;
             obj.SetActive(true);
-            activeCollectibles.Add(obj);
         }
 
-        Debug.Log($"[CollectibleSpawner] Spawned {spawnCount} collectibles for Day {GameManager.Instance.GetCurrentDay()}.");
+        Debug.Log($"[CollectibleSpawner] Activated {spawnCount} collectibles for Day {GameManager.Instance.GetCurrentDay()}.");
     }
+
 
     private List<Transform> PickSpawnPoints(int count)
     {
         List<Transform> available = new List<Transform>(spawnPoints);
-        List<Transform> chosen = new List<Transform>();
 
-        if (!randomizeSpawnPoints)
-        {
-            // Use the first N points in order
-            for (int i = 0; i < count && i < available.Count; i++)
-                chosen.Add(available[i]);
-        }
-        else
-        {
-            // Fisher-Yates shuffle then take first N
-            for (int i = available.Count - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                (available[i], available[j]) = (available[j], available[i]);
-            }
+        if (randomizeSpawnPoints)
+            Shuffle(available);
 
-            for (int i = 0; i < count; i++)
-                chosen.Add(available[i]);
-        }
+        return available.GetRange(0, Mathf.Min(count, available.Count));
+    }
 
-        return chosen;
+    // ── Pick desserts from DessertManager list ───────────────────────────────
+
+    private List<GameObject> PickDesserts(int count, List<GameObject> source)
+    {
+        List<GameObject> available = new List<GameObject>(source);
+        List<GameObject> result    = new List<GameObject>();
+
+        if (randomizeDesserts)
+            Shuffle(available);
+
+        // If count > source size, wrap around (repeat desserts)
+        for (int i = 0; i < count; i++)
+            result.Add(available[i % available.Count]);
+
+        return result;
     }
 
     // ── Cleanup ──────────────────────────────────────────────────────────────
 
-    private void ClearCollectibles()
+    private void DisableAll()
     {
-        foreach (GameObject obj in activeCollectibles)
-        {
-            if (obj != null)
-                Destroy(obj);
-        }
-        activeCollectibles.Clear();
-        Debug.Log("[CollectibleSpawner] Cleared all collectibles.");
+        foreach (GameObject obj in allInstances)
+            if (obj != null) obj.SetActive(false);
     }
 
-    // ── Optional: manually trigger respawn from outside ──────────────────────
-    public void RespawnNow() 
+    public void RespawnNow()
     {
-        ClearCollectibles();
-        SpawnForDay(GameManager.Instance.GetTargetForToday());
+        DisableAll();
+        ActivateForDay(GameManager.Instance.GetTargetForToday());
+    }
+
+    private void Shuffle<T>(List<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 }

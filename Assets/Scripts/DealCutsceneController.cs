@@ -120,7 +120,7 @@ public class DealCutsceneController : MonoBehaviour
         // ── 4. Outro pause, then advance day ─────────────────────────────────
         yield return new WaitForSeconds(outroDelay);
 
-        GameManager.Instance.CompleteDay();
+        GameManager.Instance.OnCutsceneFinished();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
