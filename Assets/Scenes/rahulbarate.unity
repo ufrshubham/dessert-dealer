@@ -1119,6 +1119,18 @@ PrefabInstance:
       propertyPath: rotationSpeed
       value: 5
       objectReference: {fileID: 0}
+    - target: {fileID: 8708737936796944028, guid: 278c46a967a0efc4899418d7d85443dd, type: 3}
+      propertyPath: groundCheckDistance
+      value: 0.16
+      objectReference: {fileID: 0}
+    - target: {fileID: 8708737936796944028, guid: 278c46a967a0efc4899418d7d85443dd, type: 3}
+      propertyPath: groundCheckBoxHalfExtents.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8708737936796944028, guid: 278c46a967a0efc4899418d7d85443dd, type: 3}
+      propertyPath: groundCheckBoxHalfExtents.z
+      value: 0.45
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

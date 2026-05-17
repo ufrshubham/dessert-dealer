@@ -9,7 +9,10 @@ public class RatController : MonoBehaviour
     public float rotationSpeed = 5f;
     public float animationSmoothTime = 0.1f;
 
-    public int jumpableLayer = 7;
+    [Header("Ground Check (BoxCast)")]
+    public Vector3 groundCheckBoxHalfExtents = new Vector3(0.2f, 0.05f, 0.2f);
+    public float groundCheckDistance = 0.3f;
+    public Vector3 groundCheckOffset = Vector3.zero;
 
     Rigidbody rb;
     Animator animator;
@@ -21,7 +24,6 @@ public class RatController : MonoBehaviour
     int movementId;
     DessertCollector dessertCollector;
     float currentMoveSpeed;
-    int groundContactCount = 0;
     Transform cameraTransform;
     Quaternion smoothedYaw;
 
@@ -130,26 +132,40 @@ public class RatController : MonoBehaviour
 
     void Jump()
     {
-        if (groundContactCount > 0)
+        if (IsGrounded())
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
     }
 
-    void OnCollisionEnter(Collision collision)
+    bool IsGrounded()
     {
-        if (collision.gameObject.layer == jumpableLayer)
+        Vector3 origin = transform.position + groundCheckOffset;
+        RaycastHit[] hits = Physics.BoxCastAll(
+            origin,
+            groundCheckBoxHalfExtents,
+            Vector3.down,
+            Quaternion.identity,
+            groundCheckDistance
+        );
+
+        foreach (RaycastHit hit in hits)
         {
-            groundContactCount++;
+            // ignore colliders that belong to this rat
+            if (hit.collider.transform.root != transform && !hit.collider.isTrigger)
+            {
+                return true;
+            }
         }
+        return false;
     }
 
-    void OnCollisionExit(Collision collision)
+    void OnDrawGizmos()
     {
-        if (collision.gameObject.layer == jumpableLayer)
-        {
-            groundContactCount--;
-        }
+        Vector3 origin = transform.position + groundCheckOffset;
+        Vector3 center = origin + Vector3.down * groundCheckDistance;
+        Gizmos.color = IsGrounded() ? Color.green : Color.red;
+        Gizmos.DrawWireCube(center, groundCheckBoxHalfExtents * 2f);
     }
 
     void OnDisable()
