@@ -20,6 +20,24 @@ public class FovVisualizer : MonoBehaviour
     [Tooltip("The color used for the outline of the field of view cone.")]
     private Color _outlineColor = new(1f, 0.85f, 0f, 1f);
 
+    [Header("Proximity Ring")]
+    [SerializeField]
+    [Tooltip("Color of the proximity zone ring when the alert meter is empty.")]
+    private Color _proximityIdleColor = new(0.4f, 0.8f, 1f, 0.5f);
+
+    [SerializeField]
+    [Tooltip("Color of the proximity zone ring when the alert meter is full.")]
+    private Color _proximityAlertColor = new(1f, 0.2f, 0.2f, 1f);
+
+    [Header("Vision Alert Ring")]
+    [SerializeField]
+    [Tooltip("Color of the vision delay ring when the alert meter is empty.")]
+    private Color _visionIdleColor = new(1f, 1f, 0f, 0.3f);
+
+    [SerializeField]
+    [Tooltip("Color of the vision delay ring when the alert meter is full.")]
+    private Color _visionAlertColor = new(1f, 0.5f, 0f, 1f);
+
     private void OnDrawGizmosSelected()
     {
 #if UNITY_EDITOR
@@ -30,11 +48,11 @@ public class FovVisualizer : MonoBehaviour
 
         // Get the cat's vision parameters from the CatAI component
         float radius = cat.ViewRadius;
-        float angle = cat.ViewAngle;
+        float angle  = cat.ViewAngle;
         float height = cat.ViewHeight;
 
         // Calculate the origin and forward direction for the cone
-        Vector3 origin = transform.position + Vector3.up * height;
+        Vector3 origin  = transform.position + Vector3.up * height;
         Vector3 forward = transform.forward;
 
         // Calculate the starting point of the arc (left boundary of the cone)
@@ -53,9 +71,17 @@ public class FovVisualizer : MonoBehaviour
         Gizmos.DrawLine(origin, origin + arcFrom.normalized * radius);
         Gizmos.DrawLine(origin, origin + (Quaternion.Euler(0f, angle * 0.5f, 0f) * forward).normalized * radius);
 
-        // Optional: draw a wire sphere to indicate the maximum view radius
-        Gizmos.color = new Color(_outlineColor.r, _outlineColor.g, _outlineColor.b, 0.15f);
-        Gizmos.DrawWireSphere(origin, radius);
+        // Outer view radius — flat 2D circle
+        Handles.color = new Color(_outlineColor.r, _outlineColor.g, _outlineColor.b, 0.15f);
+        Handles.DrawWireArc(origin, Vector3.up, forward, 360f, radius);
+
+        // Vision delay ring — tints from idle to alert as the timer fills
+        Handles.color = Color.Lerp(_visionIdleColor, _visionAlertColor, cat.VisionAlertFill);
+        Handles.DrawWireArc(origin, Vector3.up, forward, 360f, radius);
+
+        // Proximity ring — flat 2D circle, tints from idle to alert as the timer fills
+        Handles.color = Color.Lerp(_proximityIdleColor, _proximityAlertColor, cat.ProximityAlertFill);
+        Handles.DrawWireArc(origin, Vector3.up, forward, 360f, cat.ProximityAlertRadius);
 #endif
     }
 }
